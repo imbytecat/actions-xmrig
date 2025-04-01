@@ -1,63 +1,42 @@
 name: Build XMRig
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
 
 jobs:
-  xmrig-linux-static-arm64:
-    runs-on: ubuntu-24.04-arm
-    container:
-      image: alpine:latest
-
+  build-xmrig-linux-static:
+    runs-on: ubuntu-latest
     steps:
-      - name: Patch Alpine container into actions runner environment
+      -
+        name: Checkout code
+        uses: actions/checkout@v3
+      # -
+      #   name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v3
+      # -
+      #   name: Set up Docker Buildx
+      #   uses: docker/setup-buildx-action@v3
+      # -
+      #   name: Build and push
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     push: false
+      #     tags: xmrig:latest
+      -
+        name: Build XMRig
         run: |
-          apk add nodejs
-        shell: sh  # No bash in Alpine by default
-
-      - name: Install dependencies
-        run: |
-          apk add git make cmake libstdc++ gcc g++ automake libtool autoconf linux-headers upx
-
-      - name: Checkout XMRig code
-        run: |
-          git clone https://github.com/xmrig/xmrig.git
-
-      - name: Build library dependencies
-        run: |
-          cd xmrig
-          cd scripts && ./build_deps.sh
-
-      - name: Patch XMRig
-        run: |
-          cd xmrig
-          sed -i 's/DonateLevel\ =\ 1/DonateLevel\ =\ 0/g' src/donate.h
-          sed -i 's/"donate-level":\ 1/"donate-level":\ 0/g' src/core/config/Config_default.h
-          sed -i 's/"donate-over-proxy":\ 1/"donate-over-proxy":\ 0/g' src/core/config/Config_default.h
-          sed -i 's/"coin":\ null/"coin":\ "monero"/g' src/core/config/Config_default.h
-          sed -i 's/donate.v2.xmrig.com:3333/pool.supportxmr.com:443/g' src/core/config/Config_default.h
-          sed -i 's/YOUR_WALLET_ADDRESS/${{ secrets.WALLET_ADDRESS }}/g' src/core/config/Config_default.h
-          sed -i 's/"nicehash":\ false/"nicehash":\ true/g' src/core/config/Config_default.h
-          sed -i 's/"tls":\ false/"tls":\ true/g' src/core/config/Config_default.h
-
-      - name: Build XMRig binary
-        run: |
-          cd xmrig
-          mkdir build && cd build
-          cmake .. -DXMRIG_DEPS=scripts/deps -DBUILD_STATIC=ON -DWITH_EMBEDDED_CONFIG=ON
-          make -j$(nproc)
-
-      - name: Compress executable files
-        run: |
-          cd xmrig
-          cd build
-          strip xmrig
-          upx xmrig
-
-      - name: Archive artifacts
-        uses: actions/upload-artifact@v4
+          docker build --no-cache -t xmrig:latest .
+          id=$(docker create xmrig:latest)
+          docker cp $id:/xmrig/build/xmrig - > build/xmrig.tar
+          tar -xvf build/xmrig.tar -C build && rm build/xmrig.tar
+          docker rm -v $id
+      -
+        name: Archive artifacts
+        # uses: actions/upload-artifact@v4
+        uses: christopherhx/gitea-upload-artifact@v4
         with:
-          name: xmrig-linux-static-arm64
-          path: xmrig/build/xmrig
+          name: xmrig
+          path: build/xmrig
