@@ -6,10 +6,8 @@ on:
       - main
 
 jobs:
-  xmrig-linux-static-x64:
-    runs-on:
-      - ubuntu-24.04
-      - ubuntu-24.04-arm
+  xmrig-linux-static-arm64:
+    runs-on: ubuntu-24.04-arm
     container:
       image: alpine:latest
 
@@ -59,7 +57,7 @@ jobs:
           upx xmrig
 
       - name: Archive artifacts
-        uses: christopherhx/gitea-upload-artifact@v4
+        uses: actions/upload-artifact@v4
         with:
-          name: xmrig-linux-static-x64
+          name: xmrig-linux-static-arm64
           path: xmrig/build/xmrig
