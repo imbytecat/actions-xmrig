@@ -30,13 +30,12 @@ jobs:
         run: |
           docker build --no-cache -t xmrig:latest .
           id=$(docker create xmrig:latest)
-          docker cp $id:/xmrig/build/xmrig - > build/xmrig.tar
-          tar -xvf build/xmrig.tar -C build && rm build/xmrig.tar
+          docker cp $id:/xmrig/build/xmrig - > xmrig.tar
+          tar -xvf xmrig.tar
           docker rm -v $id
       -
         name: Archive artifacts
-        # uses: actions/upload-artifact@v4
-        uses: christopherhx/gitea-upload-artifact@v4
+        uses: actions/upload-artifact@v4
         with:
           name: xmrig
           path: build/xmrig
