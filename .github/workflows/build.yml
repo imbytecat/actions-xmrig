@@ -9,33 +9,38 @@ on:
 jobs:
   build-xmrig-linux-static:
     runs-on: ubuntu-latest
+
     steps:
       -
         name: Checkout code
         uses: actions/checkout@v3
-      # -
-      #   name: Set up QEMU
-      #   uses: docker/setup-qemu-action@v3
-      # -
-      #   name: Set up Docker Buildx
-      #   uses: docker/setup-buildx-action@v3
-      # -
-      #   name: Build and push
-      #   uses: docker/build-push-action@v6
-      #   with:
-      #     push: false
-      #     tags: xmrig:latest
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       -
         name: Build XMRig
         run: |
-          docker build --no-cache -t xmrig:latest .
-          id=$(docker create xmrig:latest)
-          docker cp $id:/xmrig/build/xmrig - > xmrig.tar
-          tar -xvf xmrig.tar
-          docker rm -v $id
+          docker buildx build --no-cache --platform linux/amd64,linux/arm64 -t xmrig:latest .
+
+          id_amd64=$(docker create --platform linux/amd64 xmrig:latest)
+          docker cp $id_amd64:/xmrig/build/xmrig - > xmrig-amd64.tar
+          tar -xvf xmrig-amd64.tar
+          mv xmrig xmrig-linux-amd64
+          docker rm -v $id_amd64
+
+          id_arm64=$(docker create --platform linux/arm64 xmrig:latest)
+          docker cp $id_arm64:/xmrig/build/xmrig - > xmrig-arm64.tar
+          tar -xvf xmrig-arm64.tar
+          mv xmrig xmrig-linux-arm64
+          docker rm -v $id_arm64
       -
         name: Archive artifacts
         uses: actions/upload-artifact@v4
         with:
           name: xmrig-linux-static
-          path: xmrig
+          path: |
+            xmrig-linux-amd64
+            xmrig-linux-arm64
